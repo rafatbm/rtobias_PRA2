@@ -2,6 +2,8 @@
 #Carrega de llibreries
 library(tidyverse)
 library(dplyr)
+library(openxlsx)
+library(readxl)
 
 
 #Carrega de fitxers
@@ -327,3 +329,66 @@ launch_per_regions <- launch_place1 %>%
                total = n.x + n.y + n.x.x + n.y.y + n.x.x.x + n.y.y.y) %>% 
         select(launch_place1, total)
 
+write.xlsx(atacs_per_region,"atacs_per_regio.xlsx", rowNames = FALSE)  
+write.xlsx(launch_per_regions,"launch_per_region.xlsx", rowNames = FALSE) 
+
+tipus_missils <- missile_attacks_daily %>% 
+        group_by(model) %>% 
+        summarise(launched = sum(launched),
+                  destroyed = sum(destroyed),
+                  not_reach_goal = sum(not_reach_goal))
+
+
+        mutate(model = str_replace_all(model, "/", " and ")) %>% 
+        separate(model, into = paste0("model", 1:4), sep = " and ", fill = "right") %>% 
+        select(model1,model2,model3,model4)
+        
+
+tipus_missils1 <- tipus_missils %>%
+        group_by(model1) %>% 
+        count(model1) %>% 
+        na.omit()
+
+tipus_missils2 <- tipus_missils %>%
+        group_by(model2) %>% 
+        count(model2) %>% 
+        na.omit()
+
+tipus_missils3 <- tipus_missils %>%
+        group_by(model3) %>% 
+        count(model3) %>% 
+        na.omit()
+
+tipus_missils4 <- tipus_missils %>%
+        group_by(model4) %>% 
+        count(model4) %>% 
+        na.omit()
+
+tipus_missil_total <- tipus_missils1 %>% 
+        left_join(tipus_missils2, by = c("model1" = "model2")) %>% 
+        left_join(tipus_missils3, by = c("model1" = "model3")) %>% 
+        left_join(tipus_missils4, by = c("model1" = "model4")) %>%
+        mutate(across(everything(), ~replace_na(., 0)),
+               total = n.x + n.y + n.x.x + n.y.y) %>% 
+        select(model1, total)
+
+
+#Segons la web del Banc Mundial (https://datos.bancomundial.org/indicador/SP.POP.TOTL?locations=UA) la pobráció d'Ucraïna al 2022,
+#any de l'inici de la invasió era de 41.048.766 habitants 
+
+poblacio_ucraina <- 41048766
+print(paste0("La poblacio a Ucraïna al 2022 era de ",poblacio_ucraina,"habitants."))
+
+#Segons dades de Nacions Unides le nombre total de refugiats
+refugiats_totals <- read_excel("C:/Users/rafat/Documents/UOC/Master en Ciencia de Dades/Visualització de dades/PRA2/rtobias_PRA2/data_in/statistic_id1312584_number-of-ukrainian-refugees-2024-by-country.xlsx", sheet = "Data_mod")
+
+refugiats <- sum(refugiats_totals$`Number of refugees`)
+print(paste0("El total de refugiats és de ",refugiats,"."))
+
+#Revisarem quina es la proporció de població refugiada respecte el total
+percentatge_refugiats <- refugiats/poblacio_ucraina
+print(paste0("El ",round(percentatge_refugiats*100,2), "% de problació ha fugit del país"))
+
+total_bombardejos <- sum(atacs_per_region$total) - 28
+        
+print(paste0("El total de bombardejos ha sigut de ",total_bombardejos, "."))
